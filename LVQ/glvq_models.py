@@ -89,11 +89,9 @@ class GLVQ(LVQBase):
             if decay_scheme == True:
                 self.alpha = self.alpha*(math.exp(-1*iter/self.max_iter))
                 self._prototypes = self.update_prototypes(train_data, train_labels, self._prototypes, self._protolabels)
-                error = self.cost(train_data, train_labels, self._prototypes, self._protolabels)
-            else:
-                self._prototypes = self.update_prototypes(train_data, train_labels, self._prototypes, self._protolabels)
-                predicted = self.predict(train_data)
-                error = self.cost(train_data, train_labels, self._prototypes, self._protolabels)
+            self._prototypes = self.update_prototypes(train_data, train_labels, self._prototypes, self._protolabels)
+            predicted = self.predict(train_data)
+            error = self.cost(train_data, train_labels, self._prototypes, self._protolabels)
             loss.append(error)
             if iter % 10 == 0:
                 predicted = self.predict(train_data)
@@ -101,6 +99,8 @@ class GLVQ(LVQBase):
                 logging.info(f'Epoch {iter:04d} - Accuracy: {accuracy:.2f}%, Loss: {error:.4f}')
         if plot_loss == True:
             plt.plot(loss)
+            plt.ylabel('log likelihood ratio')
+            plt.xlabel(' number of iterations')
 
         logging.info("Training finished")
         
@@ -183,14 +183,11 @@ class GRLVQ(LVQBase):
         self._weights = initialize_weights(train_data)
         loss = []
         for iter in tqdm(range(self.max_iter), desc="Training Progress"):
-            if decay_scheme == True:
+            if decay_scheme :
                 self.alpha = self.alpha*(math.exp(-1*iter/self.max_iter))
                 self.eps = self.eps*(math.exp(-1*iter/self.max_iter))
-                self._prototypes, self._weights = self.update_prototypes(train_data, train_labels, self._prototypes, self._protolabels, self._weights)
-                error = self.cost(train_data, train_labels, self._prototypes, self._protolabels, self._weights)
-            else:
-                self.prototypes, self._weights = self.update_prototypes(train_data, train_labels, self._prototypes, self._protolabels)
-                error = self.cost(train_data, train_labels, self._prototypes, self._protolabels, self._weights)
+            self._prototypes, self._weights = self.update_prototypes(train_data, train_labels, self._prototypes, self._protolabels, self._weights)
+            error = self.cost(train_data, train_labels, self._prototypes, self._protolabels, self._weights)
             loss.append(error)
             if iter % 10 == 0:
                 predicted = self.predict(train_data)
@@ -198,6 +195,8 @@ class GRLVQ(LVQBase):
                 logging.info(f'Epoch {iter:04d} - Accuracy: {accuracy:.2f}%, Loss: {error:.4f}')
         if plot_loss == True:
             plt.plot(loss)
+            plt.ylabel('log likelihood ratio')
+            plt.xlabel(' number of iterations')
 
         logging.info("Training finished")
 

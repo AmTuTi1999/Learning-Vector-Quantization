@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from LVQ.lvq_base import LVQBase
 import logging
 import matplotlib.pyplot as plt
@@ -81,7 +82,7 @@ class RSLVQ(LVQBase):
         ])
         return numerator - denominator
 
-    def fit(self, train_data, train_labels, show_plot=False) -> None:
+    def fit(self, train_data, train_labels, decay_scheme=False, show_plot=False) -> None:
         """Fits the model on training data by iteratively updating prototypes.
 
         Args:
@@ -98,6 +99,8 @@ class RSLVQ(LVQBase):
         loss = []
         # Using tqdm for progress tracking
         for iter in tqdm(range(self.max_iter), desc="Training Progress"):
+            if decay_scheme:
+                self.alpha = self.alpha*(math.exp(-1*iter/self.max_iter))
             self._prototypes = self.update_prototypes(train_data, train_labels, self._prototypes, self._protolabels)
             predicted = self.predict(train_data)
             val_acc = (np.array(predicted) == train_labels).mean() * 100  

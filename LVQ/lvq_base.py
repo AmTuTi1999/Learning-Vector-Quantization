@@ -92,9 +92,15 @@ class LVQBase:
     @abstractmethod
     def predict_proba(self, input: np.ndarray) -> list[float]:
         label_prototypes = np.array([self._prototypes[self._protolabels == i] for i in np.unique(self._protolabels)])
-        closest_prototypes = np.array([prototypes[np.argmin(np.linalg.norm(input - prototypes, axis=1))] for prototypes in label_prototypes])
-        scores = np.linalg.norm(input - closest_prototypes, axis=1)
-        return sc.special.softmax(-scores)
+        closest_prototypes = []
+        for prototypes in label_prototypes:
+            distances = np.linalg.norm(input[:, None] - prototypes, axis=2)
+            closest_idxs = np.argmin(distances, axis=1)
+            closest_prototypes.append(prototypes[closest_idxs])
+        closest_prototypes = np.array(closest_prototypes).transpose(1, 0, 2)  # (n_samples, n_labels, n_features)
+        scores = np.linalg.norm(input[:, None] - closest_prototypes, axis=2)
+        
+        return sc.special.softmax(-scores, axis=1)
  
     @abstractmethod
     def fit(

@@ -4,7 +4,7 @@ import logging
 import math
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from LVQ.init import initialize_prototypes, initialize_weights, weightedL2
+from LVQ.init import initialize_prototypes, initialize_weights, weightedL2, sigmoid
 
 logging.basicConfig(level=logging.DEBUG, format='%(filename)s:%(lineno)d - %(message)s')
 
@@ -52,6 +52,35 @@ class RLVQ(LVQBase):
             weights /= np.sum(weights)
         return weights
     
+    def cost(self, data, labels, prototypes, proto_labels, weights):
+        """
+        Compute the cost based on weighted distances between data points and prototypes.
+
+        Args:
+            data (np.ndarray): Array of input data points.
+            labels (np.ndarray): Array of labels corresponding to the input data.
+            prototypes (np.ndarray): Array of prototype vectors.
+            proto_labels (np.ndarray): Array of labels corresponding to the prototypes.
+            weight (np.ndarray): Weight vector to calculate weighted distances.
+
+        Returns:
+            float: The total cost, which is the sum of the sigmoid-transformed relative distances.
+        """
+        costs = []
+        for i in range(len(data)):
+            xi = data[i]
+            x_label = labels[i]
+            dist_a = np.array([weightedL2(xi, prototypes[j], weights) 
+                            for j in range(len(prototypes)) if x_label == proto_labels[j]])
+            d_a = dist_a.min()
+            dist_b = np.array([weightedL2(xi, prototypes[j], weights) 
+                            for j in range(len(prototypes)) if x_label != proto_labels[j]])
+            d_b = dist_b.min()
+            rel_dist = (d_a - d_b) / (d_a + d_b)
+            costs.append(sigmoid(rel_dist).flatten())
+        total_cost = np.sum(np.array(costs))
+        return total_cost
+    
     def update_prototypes(self, data, labels, prototypes, protolabels, weights):
         """
         Update the prototypes based on the distances between data points and their nearest prototypes.
@@ -77,7 +106,7 @@ class RLVQ(LVQBase):
                 prototypes[nearest_index] -= prototype_update
         return prototypes
 
-    def fit(self, data, labels, decay_scheme=True) -> tuple:
+    def fit(self, data, labels, decay_scheme=True, show_plot=False) -> tuple:
         """
         Fit the model to the training data by iteratively updating weights and prototypes.
 
@@ -94,6 +123,7 @@ class RLVQ(LVQBase):
             data, labels, initialization_type=self.initialization_type, num_prototypes_per_class=self.num_prototypes
         )
         self._weights = initialize_weights(data)
+        loss = []
         for iter in tqdm(range(self.max_iter), desc="Training Progress"):
             if decay_scheme:
                 self.eps *= math.exp(-iter / self.max_iter)
@@ -103,9 +133,14 @@ class RLVQ(LVQBase):
             if iter % 10 == 0:
                 predicted = self.predict(data)
                 accuracy = (np.array(predicted) == labels).mean() * 100
-                #loss = self.likelihood_ratio(self.prototypes, self.protolabels, data, labels)
-                logging.info(f'Epoch {iter:04d} - Accuracy: {accuracy:.2f}%')#, Loss: {loss:.4f}')
+                loss = self.cost(data, labels, self._prototypes, self._protolabels, )
+                logging.info(f'Epoch {iter:04d} - Accuracy: {accuracy:.2f}%, Loss: {loss:.4f}')
         logging.info("Training finished")
+
+        if show_plot:
+            plt.plot(loss)
+            plt.ylabel('log likelihood ratio')
+            plt.xlabel(' number of iterations')
 
 
 
